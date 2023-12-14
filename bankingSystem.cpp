@@ -3,6 +3,11 @@
 #include<fstream>
 using namespace std;
 
+#define MIN_BALANCE 500
+
+class insufficientFunds{
+};
+
 class Account{
 	public:
 		float balance;
@@ -32,8 +37,8 @@ class Account{
 		void setBalance(float balance){ this->balance=balance;}
 		void deposit(float amount);
 		void withdraw(float amount);
-		long getLastNextAccountNumber(){ return nextAccountNumber;}
-		void setLastNextAccountNumber(long nextAccountNumber){ this->nextAccountNumber = nextAccountNumber;}		
+		static long getLastNextAccountNumber(){ return nextAccountNumber;}
+		static void setLastNextAccountNumber(long nextAccNumber){ nextAccountNumber = nextAccNumber;}		
 };
 
 ostream & operator<<(ostream &os, Account &acc){
@@ -66,6 +71,8 @@ void Account::deposit(float amount){
 }
 
 void Account::withdraw(float amount){
+	if(balance-amount<0)
+		throw insufficientFunds();
 	balance-=amount;
 }
 
@@ -80,7 +87,7 @@ class Bank{
 		Account deposit(long accountNumber, float amount);
 		Account withdraw(long accountNumber, float amount);
 		Account BalanceEnquiry(long accountNumber);
-		void save();
+		void transferMoney(long accountNumber1, long accountNumber2,float amount);
 		~Bank();
 };
 
@@ -96,24 +103,14 @@ Bank::Bank(){
 		ifs>>account;
 		accounts.insert(pair<long,Account>(account.getNumber(),account));
 	}
-	long x=accounts.size();
-	account.setLastNextAccountNumber(x); 
+	Account::setLastNextAccountNumber(account.getNumber()); 
 	ifs.close();
 }
 
 
 Account Bank::openAccount(string fname, string lname, float balance){
-	ofstream outfile;
 	Account acc(fname,lname,balance);
 	accounts.insert(pair<long,Account>(acc.getNumber(),acc));
-	outfile.open("Bank.data", ios::trunc);
- 
- 		map<long,Account>::iterator itr;
-		 for(itr=accounts.begin();itr!=accounts.end();itr++)
- 			{
-		 outfile<<itr->second;
- 		}
- 		outfile.close();
 	return acc;
 }
 
@@ -135,6 +132,17 @@ Account Bank::withdraw(long accountNumber, float amount){
 	itr=accounts.find(accountNumber);
 	itr->second.withdraw(amount);
 	return itr->second;
+}
+
+void Bank::transferMoney(long accountNumber1, long accountNumber2,float amount){
+	map<long, Account>::iterator itr;
+	itr=accounts.find(accountNumber2);
+	itr->second.withdraw(amount);
+	
+	map<long, Account>::iterator itr1;
+	itr1=accounts.find(accountNumber1);
+	itr1->second.deposit(amount);
+
 }
 
 void Bank::displayAllAccounts(){
@@ -163,18 +171,20 @@ Bank::~Bank(){
 	
 int choice(){
 	int c;
+	cout<<"\t To save all Transaction. Please Exit\n";
 	cout<<"Select one below option"<<endl;
 	cout<<"\t1. Create Account"<<endl;
 	cout<<"\t2. Balance Enquiry"<<endl;
 	cout<<"\t3. Deposit"<<endl;
 	cout<<"\t4. Withdraw"<<endl;
-	cout<<"\t5. Close Account"<<endl;
-	cout<<"\t6. Show All Account"<<endl;
-	cout<<"\t7. Exit"<<endl;
+	cout<<"\t5. Transfer Money"<<endl;
+	cout<<"\t6. Close Account"<<endl;
+	cout<<"\t7. Show All Account"<<endl;
+	cout<<"\t8. Exit"<<endl;
 	cout<<"Enter your Choice: ";
 	cin>>c;
 	cout<<endl;
-	if(c>0 && c<8){
+	if(c>0 && c<=8){
 		return c;
 	}
 	return -1;
@@ -188,24 +198,31 @@ int main(){
 	string fname,lname;
 	float balance;
 	float amount;
-	long number;
+	long number,number2;
 	Bank B;
-	Account acc;
+	Account acc,acc2;
 		int c=choice();
 while(1)
 {
 	switch(c){
 		case 1:
+			try{
 			cout<<"Enter First Name: ";
 			cin>>fname;
 			cout<<"Enter Last Name: ";
 			cin>>lname;
 			cout<<"Enter Balance: ";
 			cin>>balance;
+			if(balance<MIN_BALANCE)
+				throw insufficientFunds();
 			cout<<endl;
 			acc=B.openAccount(fname,lname,balance);
 			cout<<acc;
 			cout<<"Account created Successfully!"<<endl<<endl;
+			}
+			catch(insufficientFunds e){
+				cout<<"Minimum Balance must be "<<MIN_BALANCE<<endl<<endl;
+			}
 			c=choice();
 			break;
 		case 2:
@@ -229,6 +246,7 @@ while(1)
 			c=choice();
 			break;
 		case 4:
+			try{
 			cout<<"Enter Account Number: ";
 			cin>>number;
 			cout<<"Enter Withdraw Amount: ";
@@ -237,9 +255,30 @@ while(1)
 			cout<<acc;
 			cout<<endl;
 			cout<<"Amount withdraw in account Successfully!"<<"\n\n";
+		}
+		catch(insufficientFunds e){
+			cout<<"Insufficient Funds"<<endl<<endl;
+		}
 			c=choice();
 			break;
 		case 5:
+			try{
+			cout<<"Transfer Money"<<endl;;
+			cout<<"Enter From (Debit) Account Number: ";
+			cin>>number;
+			cout<<"Enter To (Credit) Account Number: ";
+			cin>>number2;
+			cout<<"Enter Amount: ";
+			cin>>amount;
+			B.transferMoney(number,number2,amount);
+			cout<<"Transaction completed Successfully!"<<endl<<endl;
+			}
+			catch(insufficientFunds e){
+			cout<<"Insufficient Funds"<<endl<<endl;
+			}
+			c=choice();
+			break;
+		case 6:
 			cout<<"Enter Account Number: ";
 			cin>>number;
 			B.closeAccount(number);
@@ -247,11 +286,11 @@ while(1)
 			cout<<"Account deleted Successfully!"<<endl<<endl;
 			c=choice();
 			break;
-		case 6:
+		case 7:
 			B.displayAllAccounts();
 			c=choice();
 			break;
-		case 7:
+		case 8:
 			cout<<"Exit"<<endl;
 //			exit(0);
 			return 0;
