@@ -98,7 +98,12 @@ Bank::Bank(){
 	if(!ifs){
 		cout<<"File can't open!!"<<endl;
 		return;
-	} 
+	}
+	ifs>>account;
+	if(ifs.eof()){
+		cout<<"\tNo Accounts"<<endl<<endl;
+		return ;
+	}
 	while(!ifs.eof()){
 		ifs>>account;
 		accounts.insert(pair<long,Account>(account.getNumber(),account));
@@ -147,6 +152,10 @@ void Bank::transferMoney(long accountNumber1, long accountNumber2,float amount){
 
 void Bank::displayAllAccounts(){
 	map<long, Account>::iterator itr;
+	if(accounts.size()==0){
+		cout<<"\tNo Accounts"<<endl<<endl;
+		return;
+	}
 	for(itr=accounts.begin();itr!=accounts.end();itr++){
 //		cout<<"Account: "<<itr->first<<endl;
 		cout<<itr->second;
