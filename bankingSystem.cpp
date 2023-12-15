@@ -7,9 +7,10 @@ using namespace std;
 
 class insufficientFunds{
 };
-
+class accountNotFound{
+};
 class Account{
-	public:
+	private:
 		float balance;
 		string firstName;
 		string lastName;
@@ -38,14 +39,17 @@ class Account{
 		void deposit(float amount);
 		void withdraw(float amount);
 		static long getLastNextAccountNumber(){ return nextAccountNumber;}
-		static void setLastNextAccountNumber(long nextAccNumber){ nextAccountNumber = nextAccNumber;}		
+		static void setLastNextAccountNumber(long nextAccNumber){ nextAccountNumber = nextAccNumber;}
+		friend ostream & operator<<(ostream &os, Account &acc);
+		friend ofstream & operator<<(ofstream &ofs, Account &acc);
+		friend ifstream & operator>>(ifstream &ifs, Account &acc);
 };
 
 ostream & operator<<(ostream &os, Account &acc){
-	os<<"Account number: "<<acc.getNumber()<<endl;
-	os<<"First Name: "<<acc.getFirstName()<<endl;
-	os<<"Last Name: "<<acc.getLastName()<<endl;
-	os<<"Balance: "<<acc.getBalance()<<endl<<endl;
+	os<<"Account number: "<<acc.number<<endl;
+	os<<"First Name: "<<acc.firstName<<endl;
+	os<<"Last Name: "<<acc.lastName<<endl;
+	os<<"Balance: "<<acc.balance<<endl<<endl;
 	return os;
 }
 
@@ -100,10 +104,11 @@ Bank::Bank(){
 		return;
 	}
 	ifs>>account;
-	if(ifs.eof()){
+	if(!account.getNumber()){
 		cout<<"\tNo Accounts"<<endl<<endl;
 		return ;
 	}
+	accounts.insert(pair<long,Account>(account.getNumber(),account));
 	while(!ifs.eof()){
 		ifs>>account;
 		accounts.insert(pair<long,Account>(account.getNumber(),account));
@@ -128,6 +133,9 @@ void Bank::closeAccount(long number){
 Account Bank::deposit(long accountNumber, float amount){
 	map<long, Account>::iterator itr;
 	itr=accounts.find(accountNumber);
+	if(accounts.end()==itr || itr->first!=accountNumber){
+		throw accountNotFound();
+	}
 	itr->second.deposit(amount);
 	return itr->second;
 }
@@ -135,17 +143,26 @@ Account Bank::deposit(long accountNumber, float amount){
 Account Bank::withdraw(long accountNumber, float amount){
 	map<long, Account>::iterator itr;
 	itr=accounts.find(accountNumber);
+	if(accounts.end()==itr || itr->first!=accountNumber){
+		throw accountNotFound();
+	}
 	itr->second.withdraw(amount);
 	return itr->second;
 }
 
 void Bank::transferMoney(long accountNumber1, long accountNumber2,float amount){
 	map<long, Account>::iterator itr;
-	itr=accounts.find(accountNumber2);
+	itr=accounts.find(accountNumber1);
+	if(accounts.end()==itr || itr->first!=accountNumber1){
+		throw accountNotFound();
+	}
 	itr->second.withdraw(amount);
 	
 	map<long, Account>::iterator itr1;
-	itr1=accounts.find(accountNumber1);
+	itr1=accounts.find(accountNumber2);
+	if(accounts.end()==itr1 || itr1->first!=accountNumber2){
+		throw accountNotFound();
+	}
 	itr1->second.deposit(amount);
 
 }
@@ -165,6 +182,9 @@ void Bank::displayAllAccounts(){
 Account Bank::BalanceEnquiry(long accountNumber){
 	map<long, Account>::iterator itr;
 	itr=accounts.find(accountNumber);
+	if(itr->first!=accountNumber){
+		throw accountNotFound();
+	}
 	return itr->second;
 }
 	
@@ -235,15 +255,21 @@ while(1)
 			c=choice();
 			break;
 		case 2:
+			try{
 			cout<<"Enter Account Number: ";
 			cin>>number;
 			cout<<endl;
 			acc=B.BalanceEnquiry(number);
 //			cout<<"Account Balance: "<<acc.getBalance()<<endl<<endl;
 			cout<<acc;
+			}
+			catch(accountNotFound e){
+				cout<<"Account Not Found\n\n";
+			}
 			c=choice();
 			break;
 		case 3:
+			try{
 			cout<<"Enter Account Number: ";
 			cin>>number;
 			cout<<"Enter Deposit Amount: ";
@@ -252,6 +278,10 @@ while(1)
 			cout<<acc;
 			cout<<endl;
 			cout<<"Amount deposit in account Successfully!"<<"\n\n";
+			}
+			catch(accountNotFound e){
+				cout<<"Account Not Found\n\n";
+			}
 			c=choice();
 			break;
 		case 4:
@@ -264,10 +294,13 @@ while(1)
 			cout<<acc;
 			cout<<endl;
 			cout<<"Amount withdraw in account Successfully!"<<"\n\n";
-		}
-		catch(insufficientFunds e){
+			}
+			catch(insufficientFunds e){
 			cout<<"Insufficient Funds"<<endl<<endl;
-		}
+			}
+			catch(accountNotFound e){
+			cout<<"Account Not Found\n\n";
+			}
 			c=choice();
 			break;
 		case 5:
@@ -284,6 +317,9 @@ while(1)
 			}
 			catch(insufficientFunds e){
 			cout<<"Insufficient Funds"<<endl<<endl;
+			}
+			catch(accountNotFound e){
+				cout<<"Account Not Found\n\n";
 			}
 			c=choice();
 			break;
